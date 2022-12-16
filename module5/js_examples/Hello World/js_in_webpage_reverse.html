@@ -1,0 +1,192 @@
+<html>
+
+<!--
+    
+    Note to Students:
+
+        This is a very short introduction to using Javascript in the browser.
+
+        To see this as a webpage, you have to start a *Local Web Server*. There are many ways to do this: since you all have python installed, we will use python.
+
+        - Open terminal
+
+        - 'cd' into the directory where this html file is (js_in_webpage.html)
+
+        - Type the following into the terminal and hit 'enter':
+            
+            ### IN PYTHON 2 ### 
+            python -m SimpleHTTPServer
+            
+            ### IN PYTHON 3 ### 
+            python -m http.server 
+
+            your server should read something like: Serving HTTP on 0.0.0.0 port 8000 ...
+
+        - now go to any browser and type in the HTTP address and the filename: something like:
+
+            http://0.0.0.0:8000/js_in_webpage.html
+
+            or
+
+            http://localhost:8000/js_in_webpage.html
+        
+        - Congrats: you now have a local HTTP server running. Now, every time you change this file and save it, when you reload the browser you will see your changes!
+-->
+
+<head><title>Intro to JS in a Browser</title></head>
+
+<body>
+
+<h1>Intro to JS in a Browser</h1>
+<h2>All of the below is created with Javascript. </h2>
+
+<script type="text/javascript">
+
+// Here are some examples of things that you might want to do with Javascript
+
+// writing to a document directly
+
+//document.write('<p><b>While you are working in Javascript (or any language), it is really important to be able to debug. Some browsers offer very simple ways to see what is happening on a page.</b></p>');
+//document.write('<p>Chrome and Firefox in particular offer good Developer Tools and Javascript console access</p><br>');
+</script>
+
+<script type="text/javascript">
+
+// Find this bug in the console and fix it!
+
+//document.write('<p>These are really helpful for finding bugs!</p><br>');
+</script>
+
+
+<script type="text/javascript">
+
+// Variables and Math:
+
+/*var num1 = '5';
+var num2 = '5';
+var answer;
+
+answer = +num1 + +num2
+
+document.write(num1 + ' plus ' + num2 + '= ' + answer );
+
+document.write('<p>An example of a random number would be ' + Math.random() + '</p>');
+
+var rightNow = new Date();
+
+document.write('<p>Right now it is ' + rightNow + '<p>');
+
+
+function divis(num,d){
+    var evenOdd = 'odd';
+    if (num%2 == 0) {evenOdd = 'even';};
+
+    var ddiv = false;
+    if (num%d == 0) {ddiv = true;};
+
+    var dtext; 
+    if (ddiv==true){dtext = 'is '} else (dtext = 'is not ');
+
+    var str;
+    str = num + ' is ' + evenOdd +' and ' + dtext + 'divisible by ' + d;
+    
+    return(str);
+};*/
+
+</script>
+
+
+<script type="text/javascript">
+
+document.write('<br><p>Enter a word to reverse it</p>')
+
+// Basic functions
+
+//Create a function to reverse any word that you type in. This can be typed into either an input
+//box or an alert box, and then print the result in a box or on the webpage.
+
+function reverseString(str) {
+    // Step 1. Use the split() method to return a new array
+    var splitString = str.split(""); // var splitString = "hello".split("");
+    // ["h", "e", "l", "l", "o"]
+ 
+    // Step 2. Use the reverse() method to reverse the new created array
+    var reverseArray = splitString.reverse(); // var reverseArray = ["h", "e", "l", "l", "o"].reverse();
+    // ["o", "l", "l", "e", "h"]
+ 
+    // Step 3. Use the join() method to join all elements of the array into a string
+    var joinArray = reverseArray.join(""); // var joinArray = ["o", "l", "l", "e", "h"].join("");
+    // "olleh"
+
+    var str1;
+    str1 = joinArray + ' is reversed word';
+    
+    //Step 4. Return the reversed string
+    return str1; // "olleh"
+}
+
+ 
+
+//function calc(){
+  //  var t = document.getElementById("target");
+   // t.innerHTML = divis(document.getElementById('num').value, 3);
+//}
+
+//<input id="num" type="number" size="4">
+    //<input type="button" value="check" onClick="calc();">
+
+/*<script type="text/javascript" src="other_script.js">*/
+
+
+function calc(){
+    var t = document.getElementById("target");
+    t.innerHTML = reverseString(document.getElementById('word').value);
+}
+</script>
+<p>
+<form name="myreverse">
+    <input type="text" id="word">
+    <button type="button" value="check" onclick="calc();"> 
+</form>
+</p>
+
+<div id="target"></div>
+</body>
+
+<body>
+<script type="text/javascript">
+document.write('<br><p>new function , show table </p>')
+
+/*Create a function that takes an input number, and prints a table with the first 20 multiples of
+the number, in order 5x4*/
+
+function Printtable(num1){
+
+list = [];
+var finalvalue = '<table border="1">';
+
+for (i = 1; i <= 20; i++) {list.push(num1 * i)};
+for (i = 0; i < 20; i++){
+                if (i % 4 == 0) { 
+                    finalvalue = finalvalue +'<tr>'
+                };
+                finalvalue = finalvalue + '<td>' + list[i] + '</td>';
+                if (i % 4 == 3){
+                    finalvalue = finalvalue + '</tr>'};};
+            finalvalue = finalvalue + '</table>';
+            return finalvalue
+};
+function calc1(){
+    var y = document.getElementById("target");
+    y.innerHTML = Printtable(document.getElementById('num1').value);
+    }
+</script>
+<p>
+<form name="myTable">
+      <input id="num1" type="number">
+        <input type="button" value="check" onClick="calc1();">
+</form>
+</p>
+<div id="target"></div>
+</body>
+</html>

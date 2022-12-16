@@ -1,0 +1,420 @@
+---
+title: "DATA608 Final Project Proposal"
+author: "Banu Boopalan "
+date: "10/23/2022"
+output:
+  html_document:
+    theme: journal
+    toc: TRUE
+    toc_float: TRUE  
+    toc_depth: 3
+    code_folding: hide
+  ioslides_presentation: default
+  pdf_document: default
+  slidy_presentation: default
+---
+
+BANU BOOPALAN PROPOSAL: DATA 608
+
+
+##DATA SOURCES:
+
+
+NCHS - Leading Causes of Death: United States
+https://data.cdc.gov/NCHS/NCHS-Leading-Causes-of-Death-United-States/bi63-dtpu
+
+---------------------------------------------------------------------------
+
+Summary of the dataset : 
+This dataset presents the age-adjusted death rates for the 10 leading causes of death in the United States beginning in 1999. Data are based on information from all resident death...
+
+---------------------------------------------------------------------------
+
+Global health estimates: Leading causes of death
+
+https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates/ghe-leading-causes-of-death
+
+Cause-specific mortality, 2000–2019
+
+
+---------------------------------------------------------------------------
+
+## Final Project Proposal :
+
+Use : R, Shiny, Plotly
+Example: Some of these graphs on plotly's page are interesting so I would like to build similar graphs to make the visualization dashboard interactive for the user.
+Reference website : https://blog.plotly.com/post/127132206092/analyzing-data-eighteen-graphs-about-the-death
+
+Steps to present data 
+
+1. Data Preparation
+
+2. Exploratory Analysis:
+
+Top ten causes of death by Year,
+Death percentage change between Years,
+Mortality by State,
+Identify Leading causes of death.
+
+3. I would like build visualizations and summarize data to allow the user to use R, Shiny and Plotly to understand and confirm summary findings such as referenced by WHO below about causes of death within the WHO dataset across countries.
+
+4. Represent data within small multiples and design graphs for using small multiples. Maybe grouping by similar sized countries on WHO dataset and comparing the causes of death similarities.
+
+5. Create map based visualization for US states and the select countries of the world showing causes of death across different years.
+
+
+Citing the reference findings below from WHO site 
+
+"Summary findings
+
+Noncommunicable diseases have become more prominent with Alzheimer’s disease and diabetes entering whereas communicable diseases are on the decline with both HIV and tuberculosis dropping out of the top 10.
+Ischaemic heart disease was the top cause of death in both 2000 and 2019. It is responsible for the largest increase in deaths – more than 2 million – over the last two decades.
+Lower respiratory infections were responsible for the most deaths in the communicable disease category in both 2000 and 2019, although the total number of deaths from lower respiratory infections has decreased. "
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)  
+library(dplyr)    
+library(tidyr)    
+library(tibble)      
+library(reshape2)   
+library(stringr)
+library(readr)
+
+
+library(plotly)
+library(shiny)
+library(rsconnect)
+library(kableExtra)
+
+
+
+## Importing the data
+df <- read.csv("C:/Users/Banu/Downloads/NCHS_-_Leading_Causes_of_Death__United_States_upd.csv", header= TRUE,na.strings = ".")
+colnames(df) <- c('Year','Cause.Name','Cause.NameSh','State','Death','Age.Adj.Death.Rate')
+#df$Death <- as.integer(df$Death)
+df$Age.Adj.Death.Rate <- as.numeric(df$Age.Adj.Death.Rate)
+unique(df['Cause.NameSh'])
+unique(df['State'])
+unique(df['Year'])
+
+## Exploratory data
+head(df)
+dim(df)
+str(df)
+kableExtra::kable(head(df))
+
+summary(df)
+```
+
+```{r}
+
+# USA<-filter(df, df$State == "Utah")
+# head(USA)
+
+# all_causes_usa<-filter(USA,USA$Year == 1999)
+# head(all_causes_usa)
+
+
+
+```
+
+```{r}
+
+USA<-filter(df, df$State == "United States")
+head(USA)
+
+all_causes_usa<-filter(USA, USA$Cause.NameSh == "All causes")
+head(all_causes_usa)
+
+kable(head((all_causes_usa),10))
+
+yearlydeath<- USA %>%
+    group_by(Year) %>%
+    summarise(avg_Deaths = mean(Death),
+              min_Deaths = min(Death),
+              max_Deaths = max(Death),
+              total_deaths= sum(Death))%>%
+         mutate(proportiondeath = prop.table(total_deaths))%>%
+  arrange(desc(Year))
+kable(head(yearlydeath,5))
+
+
+
+
+
+```
+
+```{r}
+
+#Death proportion each year Trend
+ggplot(yearlydeath, aes(x = Year, y = proportiondeath)) +
+  geom_line(arrow = arrow())+
+  geom_point()+
+  geom_text(aes(label = round(proportiondeath,3)),
+            vjust = "inward", hjust = "inward",
+            show.legend = FALSE)+
+  scale_color_brewer(type = "seq", palette = "Dark2", name = "Country",
+                     labels = paste("Country", 1:5))
+
+
+yearlydeath<- USA %>%
+    group_by(Year,State,Cause.NameSh) %>%
+    summarise(avg_Deaths = mean(Death),
+              min_Deaths = min(Death),
+              max_Deaths = max(Death),
+              total_deaths= sum(Death))%>%
+         mutate(proportiondeath = prop.table(total_deaths))%>%
+  arrange(desc(Year,State,Cause.NameSh))
+kable(head(yearlydeath,5))
+
+
+ggplot(yearlydeath, aes(x = Year, y = proportiondeath)) +
+  geom_point() +
+  geom_line(aes(color = Cause.NameSh)) +
+  facet_wrap(~ Cause.NameSh) +
+  scale_color_discrete(guide = FALSE)
+
+#Deah proportion each year
+yearlydeath1<- USA %>%
+    group_by(Year) %>%
+    summarise(avg_Deaths = mean(Death),
+              min_Deaths = min(Death),
+              max_Deaths = max(Death),
+              total_deaths= sum(Death))%>%
+         mutate(proportiondeath = prop.table(total_deaths))%>%
+  arrange(desc(Year))
+kable(head(yearlydeath1,5))
+
+```
+
+```{r}
+
+pct_change <- df %>%
+   group_by(Cause.NameSh) %>% 
+  mutate(pct_change = (Death/lead(Death)-1) * 100)
+
+head(pct_change)
+
+data_wide1<- pct_change 
+data_wide2<-spread(data_wide1, State, Death)
+kable(head(data_wide2))
+
+ggplot((pct_change), aes(x = Year, y = pct_change)) +
+  geom_point() +
+  geom_line(aes(color = State)) +
+  facet_wrap(~ State, nrow = 1) +
+  scale_color_discrete(guide = FALSE)
+
+```
+
+```{r}
+
+library(shiny)
+library(ggplot2)
+
+shinyApp(
+  ui = fluidPage(
+    sidebarLayout(
+      sidebarPanel(
+        actionButton("newplot", "New plot")
+      ),
+      mainPanel(
+        plotOutput("plot")
+      )
+    )
+  ),
+  server = function(input, output) {
+    output$plot <- renderPlot({
+      input$newplot
+      ggplot(yearlydeath, aes(x = Year, y = proportiondeath)) +
+  geom_point() +
+  geom_line(aes(color = Cause.NameSh)) +
+  facet_wrap(~ Cause.NameSh) +
+  scale_color_discrete(guide = FALSE)
+      
+
+    })
+  }
+)
+
+
+
+
+```
+
+```{r}
+# # /*install.packages('gganimate')*/
+# library(gganimate)
+# 
+# # animedf<-USA[!grepl('Cancer',USA$Cause.NameSh),]
+# animedf<-USA
+# animedf
+# # 
+# # p <- ggplot(
+# #   animedf,
+# #   aes(Year, Death, group = Cause.NameSh, color = factor(Cause.NameSh))
+# #   ) +
+# #   geom_line() +
+# #   scale_color_viridis_d() +
+# #   labs(x = "Year", y = "Deaths") +
+# #   theme(legend.position = "top")
+# # 
+# # p + geom_point(aes(group = seq_along(Year))) +
+# #   transition_reveal(Year)
+# 
+# # Make a ggplot, but add frame=year: one image per year
+# ggplot(animedf, aes(Year, Death, color = factor(Cause.NameSh))
+#   ) +
+#   geom_point(alpha = 0.7, show.legend = FALSE) +
+#   # scale_colour_manual(values = country_colors) +
+#   scale_size(range = c(2, 12)) +
+#   scale_x_log10() +
+#   facet_wrap(~Cause.NameSh) +
+#   # Here comes the gganimate specific bits
+#   labs(title = 'Year: {frame_time}', x = 'Year', y = 'Death') +
+#   transition_time(Year) +
+#   ease_aes('linear')
+# 
+# # //anim_save("271-ggplot2-animated-gif-chart-with-gganimate2.gif")
+
+```
+
+```{r}
+# //install.packages("maps")
+# install.packages("maps")
+library(maps)
+library(ggplot2)
+library(ggthemes)
+
+states <- map_data("state")
+states$State <-states$region
+# counties <- map_data("county")
+# NewYork <- subset(states, region == "new york")
+# head(NewYork)
+
+dim(states)
+
+# ny_county <- subset(counties, region == "new york")
+# head(ny_county)
+# 
+# ggplot() + geom_polygon(data = NewYork, aes(x=long, y = lat, fill = subregion)) +
+#   geom_polygon(data = ny_county, aes(x=long, y = lat, group = group), color = "white", fill = NA) +
+#   labs(title = "New York State by Counties", x = "longitude", y = "latitude") +
+#   coord_fixed(1.3) +
+#   theme(panel.background = element_blank())
+
+head(states)
+str(states)
+
+# library(tidyverse)
+# 
+# df <- state.x77 %>% as.data.frame() %>% rownames_to_column("state")
+# df$State <- tolower(df$state)
+# 
+# df$State
+# head(df)
+
+animedf<-USA
+animedf$State <- tolower(animedf$State)
+animedf1 <- merge(animedf,pct_change,by=NULL)
+head(animedf1)
+head(animedf)
+# # dataframe_AB = merge(animedf,df,by=NULL)
+# # head(dataframe_AB)
+# # str(dataframe_AB)
+# str(animedf1)
+
+dataframe_C <- merge(states, animedf,by=NULL)
+head(dataframe_C)
+summary(dataframe_C)
+dataframe_C1 <- dataframe_C[which(dataframe_C$Year== 2015),]
+head(dataframe_C1,n=100)
+summary(dataframe_C1)
+
+dataframe_C1$region <-factor(dataframe_C1$region)
+dataframe_C1 < dataframe_C1[order(dataframe_C1$order),]
+
+
+p<-ggplot(dataframe_C1, aes(long, lat, group=group, fill = Death)) +
+  geom_polygon(color="grey")
+p
+
+p2<-p +
+  # change color scheme
+  scale_fill_continuous(
+  low = "cornflowerblue",high = "darkblue",
+  guide=guide_colorbar(barwidth = 2,barheight = 10))+
+  # add titles
+  labs(fill = "Mean Ratings")+
+  ggtitle("Mean Accentedness Ratings by State")+
+  # hide ticks on x and y axis
+    scale_y_continuous(breaks=c())+ 
+  scale_x_continuous(breaks=c()) 
+
+p2
+
+p0 <- ggplot(data = dataframe_C1,
+             mapping = aes(x = long, y = lat, group = group, fill = factor(Cause.NameSh)))
+
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.1) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+
+p1 + labs(title = "Trump vote") + theme_map() + labs(fill = "Death")
+
+p2 <- p1 + scale_fill_gradient(low = "white", high = "#CB454A") +
+        labs(title = "Trump vote")
+p2 + theme_map() + labs(fill = "Death")
+
+p <-
+ggplot() +
+geom_polygon(data = c, aes(x = long,
+                            y = lat,
+                            group = group),
+                  fill = "grey80") +
+geom_polygon(data = subset(d, !is.na(values)), aes(x = long,
+                                y = lat,
+                                group = group,
+                  fill = cat)) +
+geom_path(data = subset(d, !is.na(values)), aes(x = long,
+                                   y = lat,
+                                   group = group),
+              color = NA, size = 0) +
+geom_path(data = c, aes(x = long,
+                                   y = lat,
+                                   group = group),
+              color = "white", size = 0.2)
+
+p0 <- ggplot(data =dataframe_C,
+                     mapping=aes(x = long, y = lat, group = group, fill = Death))
+
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.1) +
+    coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+
+p2 <- p1 + scale_fill_gradient2(low = "red",
+                                mid = scales::muted("purple"),
+                                high = "blue") +
+    labs(title = "Winning margins")
+p2 + theme_map() + labs(fill = "Percent")
+# 
+# install.packages("sf")
+library(sf)
+library(ggplot2)
+
+shape <- st_read(system.file("shape/nc.shp", package="sf"))   # included with sf package
+
+# default zoom, default colors
+ggplot(data = shape,
+       aes(fill = BIR74)) +
+  geom_sf()
+
+
+
+```

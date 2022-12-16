@@ -1,0 +1,234 @@
+---
+title: 'Banu Boopalan: Module1 Homework'
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+---
+
+**Principles of Data Visualization and Introduction to ggplot2**
+
+I have provided you with data about the 5,000 fastest growing companies in the US, as compiled by Inc. magazine. lets read this in:
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+inc <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module1/Data/inc5000_data.csv", header= TRUE)
+
+```
+
+And lets preview this data:
+
+```{r}
+
+head(inc)
+
+```
+```{r}
+
+summary(inc)
+
+```
+
+Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
+
+##Answer tried to understand by summarizing to understand he data. 
+
+```{r}
+
+#install.packages("kableExtra")
+
+library(kableExtra)
+library(dplyr)
+#install.packages("ggthemes")
+library(ggthemes)
+
+str(inc)
+
+library(tidyverse)
+
+# Tufe theme. Quick graph showing industries with greater than 1000 employees along with revenue
+ggplot(filter(inc,Employees > 1000 ), aes(x = Industry, y = Revenue)) +
+  geom_point() +
+  labs(x = "Industry", y = "Revenue") +
+   theme_tufte() + coord_flip()
+
+
+# Tufe theme. Quick graph showing industries with greater than 100 employees along with revenue
+ggplot(filter(inc,Employees < 100 ), aes(x = Industry, y = Revenue)) +
+  geom_point(fill = "indianred") +
+  labs(x = "Industry", y = "Revenue") +
+   theme_tufte() + coord_flip()
+
+
+#Top 50 records by revenue
+revenuetop50 = inc %>% arrange(desc(Revenue)) %>% head(50)
+#revenuetop50
+revenuetop50$Revenue1 = sapply(revenuetop50$Revenue, function(x) paste(round((x / 1e9), 1), " Billion"))
+revenuetop50 %>% kable() %>% kable_styling()
+
+#print 
+sample <- revenuetop50 %>% arrange(desc(Revenue)) %>% head(10) 
+
+#describe unique value to find unique industries in the sample data
+sample
+unique(inc$Industry)
+unique(sample$Industry)
+
+#Plot to show by State, industries with the highest revenue where employees > 1000 from Sample of 50
+ggplot(filter(sample, Employees > 1000),aes(x = State, y = Revenue, color = Industry)) +
+  geom_point() +
+  geom_label(aes(label = Industry)) +
+  labs(x = "State", y = "Revenue") +
+   theme(legend.position = "none") 
+
+
+  
+
+```
+
+## Question 1
+
+Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
+
+
+## Answer 1 
+
+I used ggplot below to show a portrait graph by using coord_flip().Then using Theme_Tufte. Additionally then I tried to plot the numbers on the bar graph and adjusted to size 3 so I can show the numbers on the graph. 
+
+```{r}
+
+# Answer Question 1 here
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(scales)
+
+#graph1
+inc %>% count(State) %>%
+  ggplot(aes(x=reorder(State, n), y=n)) +
+  geom_bar(stat = 'identity',width = 0.5, position = position_dodge(0.8)) +
+  geom_text(aes(label=n), vjust=1.6, color="white", size=3.5) + 
+  coord_flip() +
+  theme_tufte() +
+  xlab("State") +
+  ylab("Count by State") +
+  ggtitle("Distribution of companies by state")
+
+#FINAL GRAPH FOR QUESTION1 : 2graph2 with numbers, and make the color a light blue with blank count of companies by state
+inc %>% count(State) %>%
+  ggplot(aes(x=reorder(State, n), y=n)) +
+  geom_bar(stat = 'identity',fill = "light blue", position = "dodge") +
+  geom_text(aes(label=n), position = position_stack(vjust= 0.5),
+            colour = "black", size = 3) + 
+ 
+    coord_flip() +
+  theme_tufte() +
+  xlab("State") +
+  ylab("Count by State") +
+  ggtitle("Distribution of companies by state") + scale_color_brewer(palette = "Pastel1")
+
+
+```
+
+## Question 2
+
+Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
+
+## Answer 2 : 
+
+I tried to create a few plots to understand how to show the outlier data using axis transformation for log2 and log10. Also showed triangular on outlier data. User reorder method
+The "default" method treats its first argument as a categorical variable (Industry), and reorders its levels based on the values of a second variable (Employees), usually numeric
+
+```{r}
+
+# Answer Question 2 here
+
+#1 Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.)
+
+# Subset only NY records
+NyState <- inc[ which(inc$State == 'NY'), ]
+# Remove incomplete records
+NyState  <- NyState[complete.cases(NyState ), ] 
+# show data
+head(NyState )
+
+#Find statistics
+summary(NyState)
+NyState %>% arrange(desc(Employees)) %>% head(50) %>% kable() %>% kable_styling()
+
+#quick graph of NY state
+ggplot(NyState, aes(x = Industry, y = Employees)) +
+  geom_boxplot(fill = "indianred") +
+  labs(x = "Industry", y = "Employees") +
+   theme_tufte() + coord_flip()
+
+# Graph to show boxplot with  log10 transformation. 
+ggplot(NyState, aes(x = Industry, y = Employees)) +
+  geom_boxplot(outlier.colour = "Red", 
+               outlier.shape = 2) + theme_tufte() + coord_flip()+
+  
+ scale_y_continuous(trans = "log10")
+
+#to show boxplot with  log2 transformation. 
+ggplot(NyState, aes(x = Industry, y = Employees)) +
+  geom_boxplot(outlier.colour = "Red", 
+               outlier.shape = 2) + theme_tufte() + coord_flip() +
+scale_y_continuous(trans = "log2")
+
+#FINAL GRAPH FOR QUESTION2 : Graph to show boxplot with  log2 transformation. Use re-order. Shows Business Products and Services with max outlier 
+ggplot(NyState, aes(reorder(Industry, Employees, FUN = median), Employees)) + 
+  geom_boxplot(outlier.colour = "Red", 
+               outlier.shape = 2) +
+ scale_y_continuous(trans = "log2", limits = c(min(NyState$Employees), max(NyState$Employees))) +
+  coord_flip() +
+  geom_hline(yintercept = median(NyState$Employees), 
+             color="Red", 
+             linetype="dashed") +
+  geom_text(aes(x=2, 
+            label="Median for Employees", y = median(NyState$Employees)+100 ), 
+            size = 3, 
+            colour="blue") +
+  
+  xlab("Industry") +
+  ylab("Number of Employees") +
+  theme_tufte() + 
+  ggtitle("Number of Employees by Industry in New York")
+
+```
+
+## Question 3
+
+Now imagine you work for an investor and want to see which industries generate the most revenue per employee. Create a chart that makes this information clear. Once again, the distribution per industry should be shown.
+
+## Answer 3 : 
+
+I checked the summary by using table and then colored the graph light blue to keep it more easy to view. Highest revenue is Computer Hardware, which generates revenue and employeers fewer total employees within this industry. 
+
+```{r}
+
+inc_nonmissing  <- inc[complete.cases(inc), ] 
+revemployee <- group_by(inc_nonmissing, Industry) %>% summarise(sum(Revenue),sum(Employees), revperemp = sum(Revenue) / sum(Employees))
+
+
+revemployee %>% arrange(desc(revperemp)) %>% head(50) %>% kable() %>% kable_styling()
+
+ggplot(revemployee, aes(x=reorder(Industry, revperemp), y=revperemp)) + 
+  geom_bar(stat = 'Identity',fill = "light blue", position = "dodge") +
+   coord_flip() +
+  xlab("Industry") +
+  ylab("Revenue per employee ($)") +
+  ggtitle("Revenue per employee for industry") +
+  scale_y_continuous(labels = scales::comma)+
+  theme_tufte()
+
+
+```
+
+
