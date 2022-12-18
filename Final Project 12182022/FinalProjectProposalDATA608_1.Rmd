@@ -1,0 +1,460 @@
+---
+title: "DATA608 Final Project Proposal"
+author: "Banu Boopalan "
+date: "10/23/2022"
+output:
+  html_document:
+    theme: journal
+    toc: TRUE
+    toc_float: TRUE  
+    toc_depth: 3
+    code_folding: hide
+  ioslides_presentation: default
+  pdf_document: default
+  slidy_presentation: default
+---
+
+BANU BOOPALAN PROPOSAL: DATA 608
+
+
+##DATA SOURCES:
+
+
+NCHS - Leading Causes of Death: United States
+https://data.cdc.gov/NCHS/NCHS-Leading-Causes-of-Death-United-States/bi63-dtpu
+
+---------------------------------------------------------------------------
+
+Summary of the dataset : 
+This dataset presents the age-adjusted death rates for the 10 leading causes of death in the United States beginning in 1999. Data are based on information from all resident death...
+
+---------------------------------------------------------------------------
+
+Global health estimates: Leading causes of death
+
+https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates/ghe-leading-causes-of-death
+
+Cause-specific mortality, 2000–2019
+
+
+---------------------------------------------------------------------------
+
+## Final Project Proposal :
+
+Use : R, Shiny, Plotly
+Example: Some of these graphs on plotly's page are interesting so I would like to build similar graphs to make the visualization dashboard interactive for the user.
+Reference website : https://blog.plotly.com/post/127132206092/analyzing-data-eighteen-graphs-about-the-death
+
+Steps to present data 
+
+1. Data Preparation
+
+2. Exploratory Analysis:
+
+Top ten causes of death by Year,
+Death percentage change between Years,
+Mortality by State,
+Identify Leading causes of death.
+
+3. I would like build visualizations and summarize data to allow the user to use R, Shiny and Plotly to understand and confirm summary findings such as referenced by WHO below about causes of death within the WHO dataset across countries.
+
+4. Represent data within small multiples and design graphs for using small multiples. Maybe grouping by similar sized countries on WHO dataset and comparing the causes of death similarities.
+
+5. Create map based visualization for US states and the select countries of the world showing causes of death across different years.
+
+
+Citing the reference findings below from WHO site 
+
+"Summary findings
+
+Noncommunicable diseases have become more prominent with Alzheimer’s disease and diabetes entering whereas communicable diseases are on the decline with both HIV and tuberculosis dropping out of the top 10.
+Ischaemic heart disease was the top cause of death in both 2000 and 2019. It is responsible for the largest increase in deaths – more than 2 million – over the last two decades.
+Lower respiratory infections were responsible for the most deaths in the communicable disease category in both 2000 and 2019, although the total number of deaths from lower respiratory infections has decreased. "
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+2. Exploratory Analysis:
+
+```{r}
+library(tidyverse)  
+library(dplyr)    
+library(tidyr)    
+library(tibble)      
+library(reshape2)   
+library(stringr)
+library(readr)
+library(plotly)
+library(shiny)
+library(rsconnect)
+library(kableExtra)
+library(ggplot2)
+
+
+
+## Importing the data
+df <- read.csv("C:/Users/Banu/Downloads/NCHS_-_Leading_Causes_of_Death__United_States_upd.csv", header= TRUE,na.strings = ".")
+colnames(df) <- c('Year','Cause.Name','Cause.NameSh','State','Death','Age.Adj.Death.Rate')
+#df$Death <- as.integer(df$Death)
+df$Age.Adj.Death.Rate <- as.numeric(df$Age.Adj.Death.Rate)
+unique(df['Cause.NameSh'])
+unique(df['State'])
+unique(df['Year'])
+
+## Exploratory data
+head(df)
+str(df)
+summary(df)
+
+
+fig <- plot_ly(df, y = ~Death, color = ~Cause.NameSh, type = "box")
+
+fig
+
+
+fig1 <- plot_ly(df, y = ~Age.Adj.Death.Rate, color = ~Cause.NameSh, type = "box")
+
+fig1
+
+
+```
+#Death Proportion Chart shows upward trend across All Causes over the years.
+
+```{r}
+
+USA<-filter(df, df$State == "United States")
+
+all_causes<-filter(USA, USA$Cause.NameSh == "All causes")
+
+head((all_causes),10)%>% kable() %>% kable_styling() 
+
+yearlydeath<- USA %>%
+    group_by(Year) %>%
+    summarise(avg_Deaths = mean(Death),
+              min_Deaths = min(Death),
+              max_Deaths = max(Death),
+              total_deaths= sum(Death))%>%
+         mutate(proportiondeath = prop.table(total_deaths))%>% arrange(desc(Year))
+yearlydeath %>% kable() %>% kable_styling() 
+
+fig1 <- plot_ly(yearlydeath, y = ~proportiondeath, x = ~Year, type = 'scatter', mode = 'lines')
+
+fig1
+
+```
+
+#Here we see that Heart Disease the highest cause of death , followed by cancer, then closely by Stroke, then Chronic respitory illnesses. Diabetes a little higher in numbers than Alzheimers. 
+```{r}
+
+library(ggthemes)
+
+
+yearlydeath1<- USA %>%
+    group_by(Year,State,Cause.NameSh) %>%
+    summarise(avg_Deaths = mean(Death),
+              min_Deaths = min(Death),
+              max_Deaths = max(Death),
+              total_deaths= sum(Death))%>%
+         mutate(proportiondeath = prop.table(total_deaths))%>%
+  arrange(desc(Cause.NameSh,proportiondeath))
+kable(head(yearlydeath1,50))
+
+
+
+
+fig <- plot_ly(USA, x = ~Cause.NameSh, y = ~Death, type = 'bar', name = 'Cause of death across 1999-2017', marker = list(color = 'rgb(49,130,189)'))
+
+
+fig
+
+```
+
+
+
+#Show graph of the death % change between the years. There have been some dips in %change across the years but generally on an  upward trend
+```{r}
+
+pct_change <- all_causes %>%
+   group_by(Cause.NameSh) %>%
+  mutate(pct_change = (Death/lead(Death)-1) * 100)
+
+head(pct_change,10)
+
+data_wide1<- pct_change
+data_wide2<-spread(data_wide1, State, Death)
+kable(head(data_wide2)) %>% kable_styling()
+
+
+my_change<-ggplot(data=data_wide2, aes(x=Year, y=pct_change, group=10)) +
+  geom_line(arrow = arrow())+
+  geom_point()+
+  geom_text(aes(label = round(pct_change, 1)),
+            vjust = "inward", hjust = "inward",
+            show.legend = FALSE)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  labs( x="Year", y="Percentage")+ggtitle("Death Percentage change trend ")
+
+
+ggplotly(my_change)
+
+
+```
+
+#Show Plotly Animation of States dataset and allcauses. Here we use gganimate to show the plot.
+```{r}
+
+
+library(gganimate)
+library(ggplot2)
+# //install.packages("gifski")
+# //install.packages("av")
+
+onlystates<-df[!grepl('United States',df$State),]
+states<-filter(onlystates, onlystates$Cause.NameSh == "All causes")
+head(states)
+filter_states <- filter(onlystates, onlystates$State %in% c("New York","Connecticut", "California"))
+head(filter_states)
+
+p <- ggplot(
+  states, 
+  aes(x = Age.Adj.Death.Rate, y=Death, size = Death,colour = State)
+  ) +
+  geom_point(show.legend = FALSE, alpha = 0.7) +
+  scale_color_viridis_d() +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  labs(x = "Age.adjusted.Death.Rate", y = "Deaths")
+
+p + transition_time(Year)+
+  labs(title = "Year: {frame_time}")+
+    shadow_mark(alpha = 0.3, size = 0.5)
+
+p
+
+
+```
+
+
+#Show Plotly Animation of States dataset and allcauses. Here we use gganimate to show the plot.
+```{r}
+
+
+library(gganimate)
+library(ggplot2)
+# //install.packages("gifski")
+# //install.packages("av")
+
+
+u <- ggplot(filter_states, aes(x=Age.Adj.Death.Rate, y=Death, size = Death, colour = Cause.NameSh)) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  facet_wrap(~State) +
+  # Here comes the gganimate specific bits
+  labs(title = 'Year: {frame_time}', x = 'Age.Adj.Death.Rate', y = 'Death') +
+  transition_time(Year) +
+  ease_aes('linear')
+
+u
+
+```
+#Show Static PlotLy version of the GGPLOT animation above. 
+
+```{r}
+
+
+library(gganimate)
+library(ggplot2)
+
+ggplotly(p)
+
+ggplotly(u)
+
+```
+
+#Show Plotly Animation of Filter_States dataset which is subset of underlying causes of death and age adjusted death rate. Here we use plotly animation to group by the frames of the values for connecticut, New York and Califonia and show the change over time.
+
+```{r}
+
+library(plotly)
+library(gganimate)
+library(ggplot2)
+
+
+accumulate_by <- function(dat, var) {
+  var <- lazyeval::f_eval(var, dat)
+  lvls <- plotly:::getLevels(var)
+  dats <- lapply(seq_along(lvls), function(x) {
+    cbind(dat[var %in% lvls[seq(1, x)], ], frame = lvls[[x]])
+  })
+  dplyr::bind_rows(dats)
+}
+
+head(onlystates,5)
+fig <-  filter_states
+fig <- fig %>%  accumulate_by(~Year)
+
+head(fig)
+
+
+# fig <- fig %>% group_map(
+#   ~plot_ly(data = .,
+#     x = ~Year, 
+#     y = ~Age.Adj.Death.Rate,
+#     split = ~Cause.NameSh,
+#     frame = ~frame, 
+#     type = 'scatter',
+#     # mode = 'markers'
+#     mode = 'markers', 
+#     line = list(simplyfy = F)
+#   ),KEEP=TRUE) %>% subplot(nrows = 1, shareX = TRUE, shareY=TRUE)
+
+fig <- fig %>% plot_ly(
+    x = ~Year,
+    y = ~Age.Adj.Death.Rate,
+    split = ~Cause.NameSh,
+    frame = ~frame,
+    # type = 'scatter',
+    mode = 'markers'
+    # line = list(simplyfy = F)
+  )
+
+fig <- fig %>% layout(
+  xaxis = list(
+    title = "Date",
+    zeroline = F
+  ),
+  yaxis = list(
+    title = "Median",
+    zeroline = F
+  )
+) 
+fig <- fig %>% animation_opts(
+  frame = 100, 
+  transition = 0, 
+  redraw = FALSE
+)
+fig <- fig %>% animation_slider(
+  hide = T
+)
+fig <- fig %>% animation_button(
+  x = 1, xanchor = "right", y = 0, yanchor = "bottom"
+)
+
+fig
+
+
+```
+
+#Show Two Plots to undestand the states along with their number of deaths, use small multiples with the maps and render using plotly. On the 2nd PLOT use USMAP to create a map of the variable 
+
+```{r}
+# install.packages("usmap")
+#install.packages("rgdal")
+library(maps)
+library(usmap)
+library(rgdal)
+library(ggplot2)
+library(ggthemes)
+
+states <- map_data("state")
+states$State <-states$region
+
+
+dim(states)
+head(states)
+str(states)
+
+
+# animedf<-USA
+# animedf$State <- tolower(animedf$State)
+# animedf1 <- merge(animedf,pct_change,by=NULL)
+# head(animedf1)
+# head(animedf)
+# # # dataframe_AB = merge(animedf,df,by=NULL)
+# # # head(dataframe_AB)
+# # # str(dataframe_AB)
+# # str(animedf1)
+# 
+# dataframe_C <- merge(animedf,states, by=NULL)
+# head(dataframe_C)
+# summary(dataframe_C)
+# dataframe_C1 <- dataframe_C   #[which(dataframe_C$Year== 2015),]
+# # head(dataframe_C1,n=100)
+# # summary(dataframe_C1)
+# 
+# dataframe_C1$region <-factor(dataframe_C1$region)
+# dataframe_C1 < dataframe_C1[order(dataframe_C1$order),]
+# 
+# head(dataframe_C1,250)
+# summary(dataframe_C1)
+# 
+# 
+# onlystates<-df[!grepl('United States',df$State),]
+# states<-filter(onlystates, onlystates$Cause.NameSh == "All causes")
+# head(states)
+# filter_states <- filter(onlystates, onlystates$State %in% c("New York","Connecticut", "California"))
+# head(filter_states)
+# 
+filter_states <- onlystates
+animedf<-filter_states
+animedf$State <- tolower(animedf$State)
+head(animedf)
+
+states1 <- states[c("long","lat","State","group")]
+
+dataframe_C3 <- merge.data.frame(states1,animedf,by="State")
+
+head(dataframe_C3)
+
+#SMALL MULTIPLES PLOT WITH PLOTLY
+
+p0 <- ggplot(data =dataframe_C3,
+             mapping=aes(x = long, y = lat, group=group, fill = Death)) + facet_wrap(~Cause.NameSh, ncol = 3)
+
+p1 <- p0 + geom_polygon(color = "gray90", size = 0.1) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45)
+
+ggplotly(p1)
+
+
+
+
+```
+
+
+
+```{r}
+# install.packages("usmap")
+#install.packages("rgdal")
+library(maps)
+library(usmap)
+library(rgdal)
+library(ggplot2)
+library(ggthemes)
+
+
+
+#PlOT USING USMAP 
+
+new_df <- dataframe_C3[c("long","lat","Death","State","Cause.NameSh")]
+new_df <- new_df%>% 
+  rename(
+    lon = long,
+    
+    )
+
+
+
+eq_transformed <- usmap_transform(new_df)
+
+head(eq_transformed,6)
+
+plot_usmap() +
+  geom_point(data = eq_transformed, aes(x = x, y = y,  Size = Death, color=Cause.NameSh))
+
+
+```
